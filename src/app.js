@@ -11,6 +11,8 @@ const townanchorRoutes = require('./modules/townanchor/townanchor.routes');
 const newsRoutes = require('./modules/news/news.routes');
 const townRoutes = require('./modules/town/town.routes');
 const userRoutes = require('./modules/user/user.routes');
+const reactionRoutes = require('./modules/reaction/reaction.routes');
+const commentRoutes = require('./modules/comment/comment.routes');
 
 // Connect to database
 connectDB();
@@ -30,6 +32,8 @@ app.use('/api/townanchor', townanchorRoutes);
 app.use('/api/news', newsRoutes);
 app.use('/api/town', townRoutes);
 app.use('/api/user', userRoutes);
+app.use('/api/reaction', reactionRoutes);
+app.use('/api/comment', commentRoutes);
 
 // Health check
 app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
