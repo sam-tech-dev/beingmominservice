@@ -21,11 +21,15 @@ const townAnchorSchema = new mongoose.Schema(
       select: false,
     },
     town: {
-      type: String,
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Town',
       required: [true, 'Town is required'],
-      trim: true,
     },
     isVerified: {
+      type: Boolean,
+      default: false,
+    },
+    isAdmin: {
       type: Boolean,
       default: false,
     },

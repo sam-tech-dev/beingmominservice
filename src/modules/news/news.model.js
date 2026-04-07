@@ -22,9 +22,9 @@ const newsSchema = new mongoose.Schema(
       required: true,
     },
     town: {
-      type: String,
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Town',
       required: true,
-      trim: true,
     },
   },
   { timestamps: true }

@@ -9,6 +9,7 @@ const errorHandler = require('./middleware/errorHandler');
 
 const townanchorRoutes = require('./modules/townanchor/townanchor.routes');
 const newsRoutes = require('./modules/news/news.routes');
+const townRoutes = require('./modules/town/town.routes');
 
 // Connect to database
 connectDB();
@@ -26,6 +27,7 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 // API routes
 app.use('/api/townanchor', townanchorRoutes);
 app.use('/api/news', newsRoutes);
+app.use('/api/town', townRoutes);
 
 // Health check
 app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));

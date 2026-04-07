@@ -1,5 +1,6 @@
 const { validationResult } = require('express-validator');
 const News = require('./news.model');
+const TownAnchor = require('../townanchor/townanchor.model');
 const { getFileUrl } = require('../../services/storage');
 
 const publish = async (req, res, next) => {
@@ -7,6 +8,11 @@ const publish = async (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(422).json({ errors: errors.array() });
+    }
+
+    const anchor = await TownAnchor.findById(req.user.id).select('town');
+    if (!anchor) {
+      return res.status(401).json({ message: 'Anchor not found' });
     }
 
     const { title, body } = req.body;
@@ -17,10 +23,13 @@ const publish = async (req, res, next) => {
       body,
       imageUrl,
       author: req.user.id,
-      town: req.user.town,
+      town: anchor.town,
     });
 
-    await news.populate('author', 'name town');
+    await news.populate([
+      { path: 'author', select: 'name' },
+      { path: 'town', select: 'name district state' },
+    ]);
 
     res.status(201).json({ news });
   } catch (error) {
@@ -36,7 +45,8 @@ const list = async (req, res, next) => {
     }
 
     const news = await News.find(filter)
-      .populate('author', 'name town')
+      .populate('author', 'name')
+      .populate('town', 'name district state')
       .sort({ createdAt: -1 });
 
     res.json({ news });
