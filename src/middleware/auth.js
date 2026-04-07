@@ -18,6 +18,15 @@ const authenticate = (req, res, next) => {
   }
 };
 
+// Restrict to a specific role: 'user' or 'townanchor'
+const requireRole = (role) => (req, res, next) => {
+  if (req.user?.role !== role) {
+    return res.status(403).json({ message: `Access restricted to ${role}s` });
+  }
+  next();
+};
+
+// Shorthand for admin check (townanchor with isAdmin flag)
 const requireAdmin = (req, res, next) => {
   if (!req.user?.isAdmin) {
     return res.status(403).json({ message: 'Admin access required' });
@@ -25,4 +34,4 @@ const requireAdmin = (req, res, next) => {
   next();
 };
 
-module.exports = { authenticate, requireAdmin };
+module.exports = { authenticate, requireRole, requireAdmin };

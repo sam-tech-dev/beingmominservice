@@ -3,6 +3,8 @@ const News = require('./news.model');
 const TownAnchor = require('../townanchor/townanchor.model');
 const { getFileUrl } = require('../../services/storage');
 
+const NEWS_PAGE_LIMIT = 10;
+
 const publish = async (req, res, next) => {
   try {
     const errors = validationResult(req);
@@ -39,17 +41,39 @@ const publish = async (req, res, next) => {
 
 const list = async (req, res, next) => {
   try {
-    const filter = {};
-    if (req.query.town) {
-      filter.town = req.query.town;
+    const twoMonthsAgo = new Date();
+    twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2);
+
+    const filter = { createdAt: { $gte: twoMonthsAgo } };
+
+    if (req.query.towns) {
+      filter.town = { $in: req.query.towns.split(',').map((id) => id.trim()) };
     }
 
-    const news = await News.find(filter)
-      .populate('author', 'name')
-      .populate('town', 'name district state')
-      .sort({ createdAt: -1 });
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const skip = (page - 1) * NEWS_PAGE_LIMIT;
 
-    res.json({ news });
+    const [news, total] = await Promise.all([
+      News.find(filter)
+        .populate('author', 'name')
+        .populate('town', 'name district state')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(NEWS_PAGE_LIMIT),
+      News.countDocuments(filter),
+    ]);
+
+    const totalPages = Math.ceil(total / NEWS_PAGE_LIMIT);
+
+    res.json({
+      news,
+      pagination: {
+        total,
+        page,
+        totalPages,
+        hasNextPage: page < totalPages,
+      },
+    });
   } catch (error) {
     next(error);
   }
