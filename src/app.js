@@ -13,6 +13,7 @@ const townRoutes = require('./modules/town/town.routes');
 const userRoutes = require('./modules/user/user.routes');
 const reactionRoutes = require('./modules/reaction/reaction.routes');
 const commentRoutes = require('./modules/comment/comment.routes');
+const personRoutes = require('./modules/person/person.routes');
 
 // Connect to database
 connectDB();
@@ -34,6 +35,7 @@ app.use('/api/town', townRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/reaction', reactionRoutes);
 app.use('/api/comment', commentRoutes);
+app.use('/api/person', personRoutes);
 
 // Health check
 app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
