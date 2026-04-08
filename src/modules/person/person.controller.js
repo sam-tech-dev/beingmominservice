@@ -182,4 +182,85 @@ const getOne = async (req, res, next) => {
   }
 };
 
-module.exports = { add, update, list, search, getOne };
+const getRoots = async (req, res, next) => {
+  try {
+    if (!req.query.town) return res.status(400).json({ message: 'town query parameter is required' });
+
+    const roots = await Person.find({ town: req.query.town, fatherId: null })
+      .select('name profilePhoto isAlive gender dateOfBirth town lifePartnerIds')
+      .populate('town', 'name')
+      .populate('lifePartnerIds', 'name profilePhoto isAlive gender dateOfBirth')
+      .sort({ name: 1 });
+
+    res.json({ roots });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const getTree = async (req, res, next) => {
+  try {
+    const rootId = req.params.id;
+    const maxDepth = Math.min(parseInt(req.query.depth) || 2, 5);
+
+    // Collect all IDs level-by-level (O(depth) queries)
+    const mongoose = require('mongoose');
+    let currentLevel = [new mongoose.Types.ObjectId(rootId)];
+    const allIds = new Set([rootId]);
+
+    for (let d = 0; d < maxDepth; d++) {
+      const nextLevel = await Person.find({ fatherId: { $in: currentLevel } }).select('_id');
+      if (nextLevel.length === 0) break;
+      nextLevel.forEach((p) => allIds.add(p._id.toString()));
+      currentLevel = nextLevel.map((p) => p._id);
+    }
+
+    // Find any children one level beyond maxDepth (for hasMoreChildren flag)
+    const beyondLevel = await Person.find({ fatherId: { $in: currentLevel } }).select('fatherId');
+    const hasMoreSet = new Set(beyondLevel.map((p) => p.fatherId.toString()));
+
+    // Fetch all persons at once
+    const allPersons = await Person.find({ _id: { $in: [...allIds] } })
+      .populate('town', 'name')
+      .populate('lifePartnerIds', 'name profilePhoto isAlive gender dateOfBirth');
+
+    // Build lookup maps
+    const personMap = {};
+    const childrenMap = {};
+    for (const p of allPersons) {
+      personMap[p._id.toString()] = p;
+    }
+    // Build children map from fatherId
+    const allWithFather = await Person.find({
+      _id: { $in: [...allIds] },
+      fatherId: { $ne: null },
+    }).select('_id fatherId');
+    for (const p of allWithFather) {
+      const fId = p.fatherId.toString();
+      if (!childrenMap[fId]) childrenMap[fId] = [];
+      childrenMap[fId].push(p._id.toString());
+    }
+
+    // Build tree recursively from map
+    const buildNode = (id, depth) => {
+      const p = personMap[id];
+      if (!p) return null;
+      const childIds = childrenMap[id] || [];
+      const obj = p.toObject();
+      return {
+        ...obj,
+        children: depth > 0 ? childIds.map((cId) => buildNode(cId, depth - 1)).filter(Boolean) : [],
+        hasMoreChildren: depth === 0 ? hasMoreSet.has(id) || childIds.length > 0 : false,
+      };
+    };
+
+    const tree = buildNode(rootId, maxDepth);
+    if (!tree) return res.status(404).json({ message: 'Person not found' });
+
+    res.json({ tree });
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports = { add, update, list, search, getOne, getRoots, getTree };
