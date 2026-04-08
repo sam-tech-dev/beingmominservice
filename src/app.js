@@ -14,6 +14,7 @@ const userRoutes = require('./modules/user/user.routes');
 const reactionRoutes = require('./modules/reaction/reaction.routes');
 const commentRoutes = require('./modules/comment/comment.routes');
 const personRoutes = require('./modules/person/person.routes');
+const commentReactionRoutes = require('./modules/comment-reaction/comment-reaction.routes');
 
 // Connect to database
 connectDB();
@@ -36,6 +37,7 @@ app.use('/api/user', userRoutes);
 app.use('/api/reaction', reactionRoutes);
 app.use('/api/comment', commentRoutes);
 app.use('/api/person', personRoutes);
+app.use('/api/comment-reaction', commentReactionRoutes);
 
 // Health check
 app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));

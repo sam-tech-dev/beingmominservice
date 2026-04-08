@@ -1,7 +1,11 @@
 const { validationResult } = require('express-validator');
 const Comment = require('./comment.model');
+const CommentReaction = require('../comment-reaction/comment-reaction.model');
+const { REACTION_TYPES } = require('../reaction/reaction.model');
 
 const COMMENT_PAGE_LIMIT = 10;
+
+const buildCommentSummary = () => Object.fromEntries(REACTION_TYPES.map((t) => [t, 0]));
 
 const add = async (req, res, next) => {
   try {
@@ -12,7 +16,14 @@ const add = async (req, res, next) => {
     const comment = await Comment.create({ news: newsId, user: req.user.id, text });
     await comment.populate('user', 'name profilePhoto');
 
-    res.status(201).json({ comment });
+    const enriched = {
+      ...comment.toObject(),
+      reactionSummary: buildCommentSummary(),
+      totalReactions: 0,
+      userReaction: null,
+    };
+
+    res.status(201).json({ comment: enriched });
   } catch (error) {
     next(error);
   }
@@ -35,8 +46,34 @@ const list = async (req, res, next) => {
 
     const totalPages = Math.ceil(total / COMMENT_PAGE_LIMIT);
 
+    // Enrich comments with reaction summaries and current user's reaction
+    const commentIds = comments.map((c) => c._id);
+    const [reactionAgg, userReactions] = await Promise.all([
+      CommentReaction.aggregate([
+        { $match: { comment: { $in: commentIds } } },
+        { $group: { _id: { comment: '$comment', type: '$type' }, count: { $sum: 1 } } },
+      ]),
+      CommentReaction.find({ comment: { $in: commentIds }, user: req.user.id }).select('comment type'),
+    ]);
+
+    const summaryMap = {};
+    for (const { _id, count } of reactionAgg) {
+      const cId = _id.comment.toString();
+      if (!summaryMap[cId]) summaryMap[cId] = buildCommentSummary();
+      summaryMap[cId][_id.type] = count;
+    }
+    const userReactionMap = {};
+    for (const r of userReactions) userReactionMap[r.comment.toString()] = r.type;
+
+    const enriched = comments.map((c) => {
+      const cId = c._id.toString();
+      const summary = summaryMap[cId] ?? buildCommentSummary();
+      const totalReactions = Object.values(summary).reduce((a, b) => a + b, 0);
+      return { ...c.toObject(), reactionSummary: summary, totalReactions, userReaction: userReactionMap[cId] ?? null };
+    });
+
     res.json({
-      comments,
+      comments: enriched,
       pagination: { total, page, totalPages, hasNextPage: page < totalPages },
     });
   } catch (error) {

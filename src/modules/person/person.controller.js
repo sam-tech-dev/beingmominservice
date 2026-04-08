@@ -48,6 +48,13 @@ const add = async (req, res, next) => {
       addedBy: req.user.id,
     });
 
+    if (person.lifePartnerIds.length > 0) {
+      await Person.updateMany(
+        { _id: { $in: person.lifePartnerIds } },
+        { $addToSet: { lifePartnerIds: person._id } }
+      );
+    }
+
     await person.populate(RELATION_POPULATE);
 
     res.status(201).json({ person });
@@ -74,6 +81,8 @@ const update = async (req, res, next) => {
 
     const { name, mobileNumber, dateOfBirth, gender, maritalStatus, profession, highestEducation, isAlive, fatherId, motherId, lifePartnerIds, townId } = req.body;
 
+    const oldPartnerIds = person.lifePartnerIds.map((id) => id.toString());
+
     if (name !== undefined) person.name = name;
     if (mobileNumber !== undefined) person.mobileNumber = mobileNumber || null;
     if (dateOfBirth !== undefined) person.dateOfBirth = dateOfBirth || null;
@@ -91,6 +100,26 @@ const update = async (req, res, next) => {
     if (req.file) person.profilePhoto = getFileUrl(req.file.filename, req);
 
     await person.save();
+
+    if (lifePartnerIds !== undefined) {
+      const newPartnerIds = person.lifePartnerIds.map((id) => id.toString());
+      const added = newPartnerIds.filter((id) => !oldPartnerIds.includes(id));
+      const removed = oldPartnerIds.filter((id) => !newPartnerIds.includes(id));
+
+      if (added.length > 0) {
+        await Person.updateMany(
+          { _id: { $in: added } },
+          { $addToSet: { lifePartnerIds: person._id } }
+        );
+      }
+      if (removed.length > 0) {
+        await Person.updateMany(
+          { _id: { $in: removed } },
+          { $pull: { lifePartnerIds: person._id } }
+        );
+      }
+    }
+
     await person.populate(RELATION_POPULATE);
 
     res.json({ person });

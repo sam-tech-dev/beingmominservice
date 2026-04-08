@@ -1,46 +1,37 @@
 const { validationResult } = require('express-validator');
-const Reaction = require('./reaction.model');
-const { REACTION_TYPES } = require('./reaction.model');
 const mongoose = require('mongoose');
-
-const buildSummary = (agg) => {
-  const summary = Object.fromEntries(REACTION_TYPES.map((t) => [t, 0]));
-  for (const { _id, count } of agg) summary[_id] = count;
-  return summary;
-};
+const CommentReaction = require('./comment-reaction.model');
+const { buildSummary } = require('../reaction/reaction.controller');
 
 const toggle = async (req, res, next) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) return res.status(422).json({ errors: errors.array() });
 
-    const { newsId, type } = req.body;
+    const { commentId, type } = req.body;
     const userId = req.user.id;
 
-    const existing = await Reaction.findOne({ news: newsId, user: userId });
+    const existing = await CommentReaction.findOne({ comment: commentId, user: userId });
 
     if (existing) {
       if (existing.type === type) {
-        // Same type → toggle off
         await existing.deleteOne();
       } else {
-        // Different type → update
         existing.type = type;
         await existing.save();
       }
     } else {
-      await Reaction.create({ news: newsId, user: userId, type });
+      await CommentReaction.create({ comment: commentId, user: userId, type });
     }
 
-    const agg = await Reaction.aggregate([
-      { $match: { news: new mongoose.Types.ObjectId(newsId) } },
+    const agg = await CommentReaction.aggregate([
+      { $match: { comment: new mongoose.Types.ObjectId(commentId) } },
       { $group: { _id: '$type', count: { $sum: 1 } } },
     ]);
 
     const summary = buildSummary(agg);
     const totalReactions = Object.values(summary).reduce((a, b) => a + b, 0);
-
-    const updated = await Reaction.findOne({ news: newsId, user: userId });
+    const updated = await CommentReaction.findOne({ comment: commentId, user: userId });
     const userReaction = updated ? updated.type : null;
 
     res.json({ userReaction, summary, totalReactions });
@@ -54,11 +45,11 @@ const listReactors = async (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) return res.status(422).json({ errors: errors.array() });
 
-    const { newsId, type } = req.query;
-    const filter = { news: newsId };
+    const { commentId, type } = req.query;
+    const filter = { comment: commentId };
     if (type) filter.type = type;
 
-    const reactions = await Reaction.find(filter)
+    const reactions = await CommentReaction.find(filter)
       .populate('user', 'name')
       .sort({ createdAt: -1 });
 
@@ -68,4 +59,4 @@ const listReactors = async (req, res, next) => {
   }
 };
 
-module.exports = { toggle, buildSummary, listReactors };
+module.exports = { toggle, listReactors };
