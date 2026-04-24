@@ -1,0 +1,41 @@
+# dependencies
+node_modules/
+
+# environment variables
+.env
+.env.*
+!.env.example
+
+# uploads (user-generated content)
+uploads/
+
+# macOS
+.DS_Store
+
+# logs
+npm-debug.*
+*.log
+
+# Kubernetes — sensitive files (never commit these)
+k8s/secret.yaml
+k8s/secrets.yaml
+k8s/*-secret.yaml
+k8s/*-secrets.yaml
+k8s/values-secret.yaml
+k8s/values-prod.yaml
+
+# Kubernetes kubeconfig / credentials
+kubeconfig
+*.kubeconfig
+.kube/
+
+# Helm — sensitive chart values
+helm/*/values-secret.yaml
+helm/*/values-prod.yaml
+
+# TLS / certificates
+*.pem
+*.crt
+*.key
+*.p12
+*.pfx

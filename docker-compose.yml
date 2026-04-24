@@ -1,0 +1,50 @@
+version: "3.9"
+
+# Internal bridge network — `app` reaches `mongo` by service name (Docker DNS).
+networks:
+  beingmomin-net:
+    driver: bridge
+
+# Named volumes persist data between `docker compose down` / `up` cycles.
+volumes:
+  mongo-data:
+  uploads-data:
+
+services:
+
+  # -------------------------------------------------------
+  # MongoDB
+  # -------------------------------------------------------
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    networks:
+      - beingmomin-net
+    volumes:
+      - mongo-data:/data/db
+    # MongoDB is NOT exposed to the host — only reachable inside the network.
+    # Uncomment below if you want to connect with MongoDB Compass from your Mac:
+    # ports:
+    #   - "27017:27017"
+
+  # -------------------------------------------------------
+  # App
+  # -------------------------------------------------------
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    restart: unless-stopped
+    networks:
+      - beingmomin-net
+    # .env.docker must set MONGO_URI=mongodb://mongo:27017/beingmomin
+    # (`mongo` is the Docker Compose service name, resolved by Docker DNS)
+    env_file:
+      - .env.docker
+    depends_on:
+      - mongo
+    ports:
+      - "3000:3000"
+    volumes:
+      - uploads-data:/app/uploads

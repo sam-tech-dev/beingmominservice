@@ -1,0 +1,81 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: beingmominservice
+  namespace: beingmomin
+  labels:
+    app: beingmominservice
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: beingmominservice
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app: beingmominservice
+    spec:
+      containers:
+        - name: beingmominservice
+          # Replace ACCOUNT_ID with your 12-digit AWS account ID before running 03-setup-cluster.sh
+          # The setup script patches this automatically via sed.
+          image: 673698305618.dkr.ecr.ap-south-1.amazonaws.com/beingmominservice:v1.0.0
+          # Always: EKS nodes don't share a Docker daemon, so the image must be
+          # pulled from ECR on every pod start.
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3000
+          envFrom:
+            - configMapRef:
+                name: beingmomin-config
+          env:
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: beingmomin-secret
+                  key: JWT_SECRET
+            - name: MONGO_URI
+              valueFrom:
+                secretKeyRef:
+                  name: beingmomin-secret
+                  key: MONGO_URI
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: beingmomin-secret
+                  key: AWS_ACCESS_KEY_ID
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: beingmomin-secret
+                  key: AWS_SECRET_ACCESS_KEY
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+
+          # Liveness probe — restarts a stuck container
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 3000
+            initialDelaySeconds: 15
+            periodSeconds: 30
+            failureThreshold: 3
+
+          # Readiness probe — holds traffic until Atlas connection is ready
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 3

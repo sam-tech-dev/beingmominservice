@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: beingmominservice
+  namespace: beingmomin
+spec:
+  selector:
+    app: beingmominservice
+  ports:
+    - protocol: TCP
+      port: 80          # port the Service listens on
+      targetPort: 3000  # port on the pod (matches containerPort in deployment.yaml)
+  # LoadBalancer: Docker Desktop assigns `localhost` as EXTERNAL-IP automatically.
+  # Access the API at http://localhost/api/health — no port number needed.
+  # On AWS EKS: same type; AWS provisions a real NLB and assigns a hostname.
+  # For HTTP/HTTPS path routing on EKS: use ClusterIP + ALB Ingress Controller instead.
+  type: LoadBalancer

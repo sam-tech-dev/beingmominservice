@@ -1,0 +1,28 @@
+# Dependencies — installed fresh inside the build stage
+node_modules/
+
+# Secrets — NEVER bake into an image; anyone who pulls it gets your JWT_SECRET
+.env
+.env.*
+.env.docker
+
+# Runtime upload data — not source code; lives on a PVC/EBS volume at runtime
+uploads/
+
+# Version control metadata
+.git/
+.gitignore
+
+# Test artifacts
+coverage/
+
+# Log files
+*.log
+npm-debug.log*
+
+# macOS metadata
+.DS_Store
+
+# Editor config
+.vscode/
+.idea/

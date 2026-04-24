@@ -2,7 +2,6 @@ require('dotenv').config();
 
 const express = require('express');
 const morgan = require('morgan');
-const path = require('path');
 
 const connectDB = require('./config/db');
 const errorHandler = require('./middleware/errorHandler');
@@ -25,9 +24,6 @@ const app = express();
 app.use(morgan('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
-
-// Serve uploaded files statically
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // API routes
 app.use('/api/townanchor', townanchorRoutes);
