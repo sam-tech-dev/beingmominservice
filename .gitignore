@@ -39,3 +39,6 @@ helm/*/values-prod.yaml
 *.key
 *.p12
 *.pfx
+
+# Infrastructure scripts (may contain credentials)
+scripts/
