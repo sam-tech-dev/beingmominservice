@@ -23,7 +23,6 @@ const townAnchorSchema = new mongoose.Schema(
     town: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Town',
-      required: [true, 'Town is required'],
     },
     isVerified: {
       type: Boolean,
